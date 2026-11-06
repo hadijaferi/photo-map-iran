@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {openAlbum, saveAlbum} from '../../lib/album';
 import {cities, loadImage, samplePhotos, suggestCity} from '../../lib/photos';
-import {cityProvince, photoProvince, provinceCovers, provinces} from '../../lib/provinces';
+import {cityProvince, mapHeight, mapWidth, photoProvince, provinceCovers, provinces} from '../../lib/provinces';
 import ProvinceMap from './province-map';
 import {createStory} from '../../lib/story';
 
@@ -38,6 +38,7 @@ export default function Album() {
       if (saved) {
         version.current = saved.version;
         setTitle(saved.title);
+        if (provinceCovers(saved.records).size) setStep(current => current === 0 ? 2 : current);
         setPhotos(saved.records.map(record => {
           const url = record.sample ? record.url : URL.createObjectURL(record.blob);
           if (!record.sample) urls.current.add(url);
@@ -173,40 +174,47 @@ export default function Album() {
   return <>
     <header><strong className="brand">◈ ردِ سفر</strong><a href={base + "/"}>معرفی برنامه</a></header>
     <main>
-      <div className="wizard">
+      <div className="wizard album-shell">
         {step > 0 && <div className="wizard-nav">
           <button type="button" className="btn alt" disabled={importing} onClick={() => {
             setStatus('');
             if (step === 3) setFocused('');
             setStep(step - 1);
-          }}>بازگشت</button>
+          }}>{step === 3 ? '← نقشهٔ ایران' : 'بازگشت'}</button>
           <small>قدم {number(step)} از ۳</small>
         </div>}
-        <section className="hero wizard-heading">
-          <p className="eyebrow">آلبوم سفر روی نقشه</p>
-          <h1 ref={stepHeading} tabIndex={-1}>{['خاطره‌هات رو روی نقشه ببین', 'نقشه‌ات رو انتخاب کن', 'نقشهٔ سفرهای من', region?.name][step]}</h1>
-          {step === 0 && <><p>یه استان رو انتخاب کن و عکس سفرت رو اضافه کن. اولین عکس داخل مرز همون استان روی نقشه می‌شینه.</p><button className="btn" onClick={() => setStep(1)}>شروع کنیم</button></>}
-          {step === 1 && <><p>برای شروع، نقشهٔ ایران رو باز کن.</p><button className="map-choice" disabled={!ready} onClick={() => setStep(2)}><strong>ایران</strong><span>{number(covers.size)} استان از ۳۱ استان عکس داره</span><span>باز کردن نقشه ←</span></button></>}
-          {step === 2 && <p>روی یک استان بزن تا خاطره‌هاش رو ببینی یا عکس اضافه کنی.</p>}
-          {step === 3 && <p>عکس‌های این استان اینجا جمع می‌شن. برای عوض کردن کاور، روی عکس دلخواهت بزن.</p>}
+        <section className={step < 2 ? "album-intro" : "album-heading"}>
+          {step < 2 && <svg className="intro-map" viewBox={`0 0 ${mapWidth} ${mapHeight}`} aria-hidden="true">
+            {provinces.map(({id,path}) => <path key={id} d={path} fill={id === 'fars' || id === 'gilan' ? '#eab883' : '#254e46'} fillRule="evenodd" stroke="#8cab9d" strokeWidth="0.65"/>)}
+          </svg>}
+          <div className="album-heading-copy">
+            <p className="eyebrow">{step === 3 ? 'خاطره‌های این استان' : 'آلبوم سفر روی نقشه'}</p>
+            <h1 ref={stepHeading} tabIndex={-1}>{['ایران، به روایت عکس‌های تو', 'نقشهٔ ایران', 'نقشهٔ سفرهای من', region?.name][step]}</h1>
+            {step === 0 && <><p>از هر سفر، یک عکس روی نقشه بگذار. کم‌کم ایران با خاطره‌های تو پر می‌شه.</p><button className="btn" disabled={!ready} onClick={() => setStep(1)}>شروع کنیم <span aria-hidden="true">←</span></button></>}
+            {step === 1 && <><p>۳۱ استان، از شمال تا جنوب. از هر جا که خاطره داری شروع کن.</p><button className="btn" onClick={() => setStep(2)}>باز کردن نقشه <span aria-hidden="true">←</span></button></>}
+            {step === 2 && <p>روی یک استان بزن تا عکس‌هاش رو ببینی یا خاطره‌ای اضافه کنی.</p>}
+          </div>
         </section>
-        {step >= 2 && <section className="card">
+        {step >= 2 && <section className="album-map-panel">
+          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} onCover={chosen => {
+            replacePhotos(photos.map(photo => photoProvince(photo) === activeProvince ? {...photo, cover:photo === chosen} : photo));
+            setStatus('کاور استان تغییر کرد.');
+          }}>
           {step === 3 && region && <div className="wizard-upload">
             {Object.values(cityProvince).includes(activeProvince) && <label className="field">شهر (اختیاری)<select value={uploadCity} disabled={importing} onChange={event => setUploadCity(event.target.value)}>
               <option value="">فعلاً فقط استان</option>
               {Object.entries(cities).filter(([id]) => cityProvince[id] === activeProvince).map(([id,[name]]) => <option key={id} value={id}>{name}</option>)}
             </select></label>}
             <label className="btn upload-action">
-              {covers.has(activeProvince) ? 'افزودن عکس بیشتر' : 'افزودن اولین خاطرهٔ ' + region.name}
+              {importing ? 'در حال آماده‌کردن عکس‌ها…' : covers.has(activeProvince) ? 'افزودن عکس بیشتر' : 'افزودن اولین خاطرهٔ ' + region.name}
               <input type="file" accept="image/*" multiple disabled={!ready || importing} onChange={event => importFiles(event, activeProvince, uploadCity)}/>
             </label>
           </div>}
-          <p role="status">{status}</p>
-          {storage && <p role="status">{storage}</p>}
-          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} onCover={chosen => {
-            replacePhotos(photos.map(photo => photoProvince(photo) === activeProvince ? {...photo, cover:photo === chosen} : photo));
-            setStatus('کاور استان تغییر کرد.');
-          }}/>
+          </ProvinceMap>
+          <div className="album-feedback">
+            {status && <p role="status">{status}</p>}
+            {storage && <p role="status">{storage}</p>}
+          </div>
           {step === 2 && <div className="actions"><button className="btn" disabled={!covers.size || importing} onClick={preview}>ساخت پیش‌نمایش استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>}
           {step === 2 && story && <img className="story" src={story} alt="پیش‌نمایش استوری سفر"/>}
         </section>}

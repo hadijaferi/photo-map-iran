@@ -28,3 +28,41 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
 .map-controls { display:flex; flex-wrap:wrap; gap:8px; }
 .map-controls button { min-width:44px; }
 .province-map { aspect-ratio:440 / 410; touch-action:none; user-select:none; }
+
+.album-shell { max-width: 760px; }
+.album-intro { display:grid; grid-template-columns:1fr 1fr; align-items:center; min-height:360px; margin-block:24px; border-radius:28px; overflow:hidden; background:#143b34; color:#fff9ea; }
+.album-intro .intro-map { display:block; width:100%; max-height:310px; padding:26px; grid-column:2; grid-row:1; }
+.album-heading-copy { padding:clamp(20px,5vw,42px); }
+.album-intro .album-heading-copy { grid-column:1; grid-row:1; }
+.album-intro p { color:#d1e3d8; }
+.album-intro .eyebrow { color:#efc18e; }
+.album-intro .btn { background:#f3ca98; color:#16382f; border-color:#f3ca98; margin-block-start:12px; }
+.album-intro .btn span { margin-inline-start:10px; }
+.album-heading .album-heading-copy { padding:18px 0 12px; }
+.album-heading h1 { font-size:clamp(30px,7vw,44px); }
+.album-heading h1:focus,.album-intro h1:focus { outline:none; }
+.album-map-panel { background:#fffef8; border:1px solid var(--line); border-radius:24px; overflow:hidden; }
+.atlas-stage { position:relative; background:#143b34; overflow:hidden; }
+.atlas-stage .province-map { margin:0; background:transparent; border-radius:0; width:min(100%, 580px); margin-inline:auto; }
+.atlas-stage .map-controls { position:absolute; inset-inline-end:12px; inset-block-end:12px; z-index:1; gap:5px; }
+.atlas-stage .map-controls .btn { background:#143b34; color:#fff9ea; border-color:#a4b9ad; }
+.atlas-progress { position:absolute; z-index:1; inset-inline-start:14px; inset-block-start:14px; pointer-events:none; display:grid; gap:3px; color:#fff9ea; background:#143b34; padding:6px 10px; border-radius:10px; }
+.atlas-progress span { font-size:.82em; font-weight:400; }
+.atlas-progress progress { width:100%; height:4px; accent-color:#f3ca98; }
+.atlas-search,.album-map-panel > .actions,.atlas-attribution,.album-feedback { margin-inline:16px; }
+.atlas-search { margin-block:14px; }
+.atlas-search summary { cursor:pointer; color:var(--green); }
+.atlas-attribution { display:block; margin-block:10px; font-size:11px; }
+.province-gallery { padding:16px; margin:0; border-bottom:1px solid var(--line); }
+.gallery-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+.gallery-heading span { color:var(--muted); font-size:.85rem; }
+.province-gallery .wizard-upload { display:flex; flex-wrap:wrap; align-items:end; margin-block:8px 14px; }
+.province-gallery .wizard-upload .field { min-width:min(100%,140px); }
+.province-gallery .upload-action { flex:1; min-width:min(100%,190px); }
+.album-feedback:empty { display:none; }
+@media(max-width:600px) {
+  .album-intro { grid-template-columns:1fr; margin-block:16px; }
+  .album-intro .intro-map { grid-column:1; grid-row:1; max-height:250px; padding:20px; }
+  .album-intro .album-heading-copy { grid-row:2; padding-block-start:0; }
+  .album-intro .btn { width:100%; }
+}
