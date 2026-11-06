@@ -6,6 +6,7 @@ import {cities, loadImage, samplePhotos, suggestCity} from '../../lib/photos';
 import {cityProvince, mapHeight, mapWidth, photoProvince, provinceCovers, provinces} from '../../lib/provinces';
 import ProvinceMap from './province-map';
 import {createStory} from '../../lib/story';
+import {createStoryVideo} from '../../lib/story-video';
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const number = value => value.toLocaleString('fa-IR');
@@ -24,6 +25,11 @@ export default function Album() {
   const [status, setStatus] = useState('');
   const [storage, setStorage] = useState('');
   const [story, setStory] = useState('');
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [video, setVideo] = useState(null);
+  const [makingVideo, setMakingVideo] = useState(false);
+  const [storyLocation, setStoryLocation] = useState('');
+  const recording = useRef(null);
   const db = useRef(null);
   const version = useRef(0);
   const queue = useRef(Promise.resolve());
@@ -59,6 +65,7 @@ export default function Album() {
     return () => {
       active = false;
       revision.current++;
+      recording.current?.abort();
       queue.current.finally(() => db.current?.close());
       photoUrls.forEach(url => URL.revokeObjectURL(url));
       photoUrls.clear();
@@ -68,6 +75,16 @@ export default function Album() {
 
   const selected = photos.filter(photo => photo.selected);
   const covers = provinceCovers(photos);
+  useEffect(() => () => { if (video) URL.revokeObjectURL(video.url); }, [video]);
+  const locations = new Map();
+  for (const photo of photos) {
+    const province = provinces.find(item => item.id === photoProvince(photo));
+    if (!province) continue;
+    const id = photo.city ? 'city:' + photo.city : 'province:' + province.id;
+    if (!locations.has(id)) locations.set(id, {name:cities[photo.city]?.[0] ?? province.name, city:photo.city, province, photos:[]});
+    locations.get(id).photos.push(photo);
+  }
+  const videoLocation = locations.get(storyLocation) || locations.values().next().value;
   const activeProvince = focused;
   const region = provinces.find(province => province.id === activeProvince);
 
@@ -76,6 +93,7 @@ export default function Album() {
   function openProvince(id) {
     if (!id || importing) return;
     setFocused(id);
+    setPanelOpen(true);
     setUploadCity('');
     setStatus('');
     setStep(3);
@@ -101,6 +119,8 @@ export default function Album() {
   function invalidateStory() {
     revision.current++;
     setStory('');
+    recording.current?.abort();
+    setVideo(null);
   }
 
   function replacePhotos(next) {
@@ -172,6 +192,27 @@ export default function Album() {
     }
   }
 
+  async function makeVideo() {
+    if (!videoLocation || recording.current) return;
+    const job = new AbortController();
+    recording.current = job;
+    setMakingVideo(true);
+    setStatus('در حال ساخت ویدیو… این صفحه رو باز نگه دار.');
+    setVideo(null);
+    try {
+      const blob = await createStoryVideo({...videoLocation, title, terrainUrl:base + '/iran-relief.jpg', signal:job.signal});
+      if (job.signal.aborted) return;
+      setVideo({url:URL.createObjectURL(blob), extension:blob.type.includes('mp4') ? 'mp4' : 'webm'});
+      setStatus('ویدیوی خاطره آماده‌ست.');
+    } catch {
+      if (!job.signal.aborted) setStatus('ساخت ویدیو در این مرورگر انجام نشد. می‌تونی خروجی تصویری بگیری.');
+    } finally {
+      recording.current = null;
+      if (job.signal.aborted) setStatus('');
+      setMakingVideo(false);
+    }
+  }
+
   return <>
     {step < 2 && <header><strong className="brand">◈ ردِ سفر</strong><a href={base + "/"}>معرفی برنامه</a></header>}
     <main>
@@ -191,13 +232,15 @@ export default function Album() {
           {step === 3 && <button className="atlas-back" type="button" aria-label="بازگشت به نقشهٔ ایران" disabled={importing} onClick={() => {
             setStatus('');
             setFocused('');
+            setPanelOpen(true);
             setStep(2);
           }}>→</button>}
           <h1 ref={stepHeading} tabIndex={-1}>{region?.name ?? 'نقشهٔ سفرهای من'}</h1>
-          {step === 2 && <button type="button" className="atlas-back atlas-stats-toggle" onClick={() => statsDialog.current?.showModal()}>آمار سفر</button>}
+          {!panelOpen && <button type="button" className="atlas-back atlas-stats-toggle" onClick={() => setPanelOpen(true)}>نمایش خاطره‌ها</button>}
+          {step === 2 && panelOpen && <button type="button" className="atlas-back atlas-stats-toggle"  onClick={() => statsDialog.current?.showModal()}>آمار سفر</button>}
         </div>}
         {step >= 2 && <section className="album-map-panel">
-          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} feedback={status || storage} onCover={chosen => {
+          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} feedback={status || storage} panelOpen={panelOpen} onClosePanel={() => setPanelOpen(false)} terrainUrl={base + '/iran-relief.jpg'} onCover={chosen => {
             replacePhotos(photos.map(photo => photoProvince(photo) === activeProvince ? {...photo, cover:photo === chosen} : photo));
             setStatus('کاور استان تغییر کرد.');
           }}>
@@ -219,8 +262,8 @@ export default function Album() {
           <dl><div><dt>استان‌های دارای عکس</dt><dd>{number(covers.size)} از {number(provinces.length)}</dd></div>
           <div><dt>عکس‌های روی نقشه</dt><dd>{number(photos.filter(photo => photoProvince(photo)).length)}</dd></div></dl>
         </dialog>}
-        {step === 2 && <aside className="atlas-dock" aria-label="کارهای آلبوم">
-          <div className="atlas-dock-title"><strong>خاطره‌های ایران</strong><small>{number(covers.size)} استان از ۳۱ استان</small></div>
+        {step === 2 && panelOpen && <aside className="atlas-dock" aria-label="کارهای آلبوم">
+          <div className="atlas-dock-title"><strong>خاطره‌های ایران</strong><small>{number(covers.size)} استان از ۳۱ استان</small><button type="button" className="atlas-collapse" aria-label="جمع کردن پنل خاطره‌ها" onClick={() => setPanelOpen(false)}>⌄</button></div>
           <div className="atlas-stop-list">
             {covers.size ? [...covers].map(([id, photo]) => {
               const province = provinces.find(item => item.id === id);
@@ -230,7 +273,17 @@ export default function Album() {
             }) : <p>روی استان بزن و اولین خاطره‌ات رو اضافه کن.</p>}
           </div>
           {status && <p role="status">{status}</p>}
-          <div className="actions atlas-share"><button className="btn" disabled={!covers.size || importing} onClick={preview}>ساخت استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>
+          {videoLocation && <label className="field">محل استوری<select disabled={makingVideo} value={locations.has(storyLocation) ? storyLocation : locations.keys().next().value} onChange={event => {
+            setStoryLocation(event.target.value);
+            setVideo(null);
+          }}>{[...locations].map(([id, location]) => <option key={id} value={id}>{location.name}</option>)}</select></label>}
+          <div className="actions atlas-share">
+            <button className="btn" disabled={!videoLocation || importing || makingVideo} onClick={makeVideo}>{makingVideo ? 'در حال ساخت…' : 'ساخت استوری ویدیویی'}</button>
+            <button className="btn alt" disabled={!covers.size || importing || makingVideo} onClick={preview}>استوری تصویری</button>
+            {story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}
+            {video && <a className="btn alt" download={'travel-story.'+video.extension} href={video.url}>دانلود ویدیو</a>}
+          </div>
+          {video && <video className="story" src={video.url} controls playsInline aria-label="پیش‌نمایش استوری ویدیویی"/>}
           {story && <img className="story" src={story} alt="پیش‌نمایش استوری سفر"/>}
           <details className="atlas-management">
           <summary>مدیریت عکس‌ها و شهرها</summary>

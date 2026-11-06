@@ -3,7 +3,7 @@ import {changeView, mapView} from './map-viewport';
 import {cities} from '../../lib/photos';
 import {photoProvince, mapHeight, mapWidth, provinces} from '../../lib/provinces';
 
-export default function ProvinceMap({photos, covers, active, onSelect, onCover, importing, zoom = false, children, feedback}) {
+export default function ProvinceMap({photos, covers, active, onSelect, onCover, importing, zoom = false, children, feedback, panelOpen, onClosePanel, terrainUrl}) {
   const region = provinces.find(province => province.id === active);
   const gallery = photos.filter(photo => photoProvince(photo) === active);
   const viewKey = zoom ? active : '';
@@ -79,11 +79,12 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
       <defs>{provinces.map(({id,path}) => <clipPath key={id} id={'province-'+id}><path d={path} clipRule="evenodd"/></clipPath>)}</defs>
       <g className={view?.key !== viewKey ? "atlas-camera atlas-camera-transition" : "atlas-camera"}
         style={{transform:`translate(${-viewport[0]*scale}px,${-viewport[1]*scale}px) scale(${scale})`}}>
+      <image href={terrainUrl} width={mapWidth} height={mapHeight} pointerEvents="none"/>
       {provinces.map(({id,name,path,box:[x,y,width,height]}) => {
         const cover = covers.get(id);
         return <g key={id} opacity={zoom && id !== active ? 0.38 : 1}>
           {cover && <image href={cover.url} x={x} y={y} width={width} height={height} preserveAspectRatio="xMidYMid slice" clipPath={`url(#province-${id})`} pointerEvents="none"/>}
-          <path d={path} fill={cover ? 'transparent' : '#b7c9ad'} fillRule="evenodd" stroke={active === id ? '#ffce90' : '#315e53'} strokeWidth={active === id ? 2.4 : 1} role="button" tabIndex={0} aria-label={name} aria-pressed={active === id} onClick={event => { if (!event.detail || !moved.current) onSelect(id); }} onKeyDown={event => {
+          <path d={path} fill={cover ? 'transparent' : '#b7c9ad30'} fillRule="evenodd" stroke={active === id ? '#ffce90' : '#d3e3c9'} strokeWidth={active === id ? 2.4 : 1} role="button" tabIndex={0} aria-label={name} aria-pressed={active === id} onClick={event => { if (!event.detail || !moved.current) onSelect(id); }} onKeyDown={event => {
             if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(id); }
           }}/>
         </g>;
@@ -95,8 +96,8 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
       <option value="">یک استان انتخاب کن</option>
       {provinces.map(({id,name}) => <option key={id} value={id}>{name}</option>)}
     </select></label></details>}
-    {zoom && region && <section className="province-gallery" aria-label={'عکس‌های '+region.name}>
-      <div className="gallery-heading"><h2>خاطره‌های {region.name}</h2><span>{gallery.length.toLocaleString('fa-IR')} عکس</span></div>
+    {zoom && region && panelOpen && <section className="province-gallery" aria-label={'عکس‌های '+region.name}>
+      <div className="gallery-heading"><h2>خاطره‌های {region.name}</h2><span>{gallery.length.toLocaleString('fa-IR')} عکس</span><button type="button" className="atlas-collapse" aria-label="جمع کردن پنل استان" onClick={onClosePanel}>⌄</button></div>
       {children}
       {feedback && <p role="status">{feedback}</p>}
       {gallery.length ? <><p>برای تغییر کاور نقشه، روی یکی از عکس‌ها بزن.</p><div className="photos">{gallery.map(photo => {
@@ -106,6 +107,6 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
         </button>;
       })}</div></> : <p>اولین عکسی که اضافه کنی، روی نقشه کاور این استان می‌شه.</p>}
     </section>}
-    <small className="atlas-attribution">دادهٔ مرزها از <a href="https://www.geoboundaries.org/">geoBoundaries</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> و Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a></small>
+    <small className="atlas-attribution"><a href="https://earthdata.nasa.gov/data/projects/gibs">NASA Blue Marble</a> · مرزها از <a href="https://www.geoboundaries.org/">geoBoundaries</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> و Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a></small>
   </>;
 }
