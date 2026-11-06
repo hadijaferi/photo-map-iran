@@ -1,9 +1,11 @@
+import GlobeMap from './globe-map';
 import {useRef, useState} from 'react';
 import {changeView, mapView} from './map-viewport';
 import {cities} from '../../lib/photos';
 import {photoProvince, mapHeight, mapWidth, provinces} from '../../lib/provinces';
 
 export default function ProvinceMap({photos, covers, active, onSelect, onCover, importing, zoom = false, children, feedback, panelOpen, onClosePanel, terrainUrl}) {
+  const [globeUnavailable, setGlobeUnavailable] = useState(false);
   const region = provinces.find(province => province.id === active);
   const gallery = photos.filter(photo => photoProvince(photo) === active);
   const viewKey = zoom ? active : '';
@@ -68,6 +70,8 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
       <strong>{covers.size.toLocaleString('fa-IR')} <span>از {provinces.length.toLocaleString('fa-IR')} استان</span></strong>
       <progress aria-label="استان‌هایی که عکس دارند" value={covers.size} max={provinces.length}/>
     </div>}
+    {!globeUnavailable && <GlobeMap provinces={provinces} active={active} covers={covers} onSelect={onSelect} onUnavailable={() => setGlobeUnavailable(true)}/>}
+    {globeUnavailable && <>
     <div className="map-controls" role="group" aria-label="بزرگ‌نمایی نقشه">
       <button type="button" className="btn alt" aria-label="بزرگ‌نمایی" disabled={viewport[2] <= mapWidth/8} onClick={() => updateView(1.5)}>+</button>
       <button type="button" className="btn alt" aria-label="کوچک‌نمایی" disabled={viewport[2] >= mapWidth} onClick={() => updateView(1/1.5)}>−</button>
@@ -91,6 +95,8 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
       })}
       </g>
     </svg>
+    <span className="globe-fallback" role="status">نقشهٔ آنلاین در دسترس نیست · نمای آفلاین ایران</span>
+    </>}
     </div>
     {!zoom && <details className="atlas-search"><summary>انتخاب استان از فهرست</summary><label className="field">نام استان<select value={active} onChange={event => onSelect(event.target.value)}>
       <option value="">یک استان انتخاب کن</option>

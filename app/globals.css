@@ -105,3 +105,11 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
 .atlas-collapse { margin-inline-start:auto; border:1px solid currentColor; border-radius:50%; width:44px; height:44px; background:transparent; color:inherit; flex:none; }
 .atlas-app .atlas-attribution { max-width:45%; }
 .atlas-dock .story { max-height:36dvh; object-fit:contain; }
+.globe-map { position:absolute; inset:0; width:100%; height:100%; direction:ltr; }
+.globe-map .maplibregl-ctrl-top-left { top:calc(64px + env(safe-area-inset-top)); left:8px; }
+.globe-map .maplibregl-ctrl-bottom-right { right:0; bottom:0; }
+.globe-home { position:absolute; z-index:1; inset-block-start:calc(70px + env(safe-area-inset-top)); inset-inline-start:12px; background:#102722; border-color:#91ac9d; border-radius:999px; }
+.globe-photo-marker { width:42px; height:42px; padding:2px; border:2px solid #f5debb; border-radius:50%; background:#102722; }
+.globe-photo-marker img { width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
+.globe-fallback { position:absolute; inset-inline-start:12px; inset-block-start:80px; background:#102722; color:#fbf4e3; padding:4px 8px; border-radius:8px; font-size:12px; }
+.globe-map .maplibregl-ctrl-bottom-right { top:calc(122px + env(safe-area-inset-top)); bottom:auto; }
