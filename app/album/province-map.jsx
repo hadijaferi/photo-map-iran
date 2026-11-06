@@ -3,13 +3,14 @@ import {changeView, mapView} from './map-viewport';
 import {cities} from '../../lib/photos';
 import {photoProvince, mapHeight, mapWidth, provinces} from '../../lib/provinces';
 
-export default function ProvinceMap({photos, covers, active, onSelect, onCover, importing, zoom = false, children}) {
+export default function ProvinceMap({photos, covers, active, onSelect, onCover, importing, zoom = false, children, feedback}) {
   const region = provinces.find(province => province.id === active);
   const gallery = photos.filter(photo => photoProvince(photo) === active);
   const viewKey = zoom ? active : '';
   const initial = mapView(mapWidth, mapHeight, zoom ? region?.box : undefined);
   const [view, setView] = useState(null);
   const viewport = view?.key === viewKey ? view.box : initial;
+  const scale = mapWidth / viewport[2];
   const pointers = useRef(new Map());
   const moved = useRef(false);
   const startPoint = useRef(null);
@@ -44,12 +45,17 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
     moved.current = true;
     pointers.current.set(event.pointerId, point);
     const rect = event.currentTarget.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    const ratio = Math.min(rect.width / mapWidth, rect.height / mapHeight);
+    if (!ratio) return;
+    const width = mapWidth * ratio;
+    const height = mapHeight * ratio;
+    const left = rect.left + (rect.width - width) / 2;
+    const top = rect.top + (rect.height - height) / 2;
     const midpoint = other ? previous.map((value,i) => (value+other[i])/2) : previous;
     const factor = other ? Math.max(1,distance(point,other)) / Math.max(1,distance(previous,other)) : 1;
     const divisor = other ? 2 : 1;
-    updateView(factor, (midpoint[0]-rect.left)/rect.width, (midpoint[1]-rect.top)/rect.height,
-      (point[0]-previous[0])/rect.width/divisor, (point[1]-previous[1])/rect.height/divisor);
+    updateView(factor, (midpoint[0]-left)/width, (midpoint[1]-top)/height,
+      (point[0]-previous[0])/width/divisor, (point[1]-previous[1])/height/divisor);
   }
 
   function pointerEnd(event) {
@@ -67,10 +73,12 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
       <button type="button" className="btn alt" aria-label="کوچک‌نمایی" disabled={viewport[2] >= mapWidth} onClick={() => updateView(1/1.5)}>−</button>
       <button type="button" className="btn alt" onClick={() => setView({key:viewKey, box:[0,0,mapWidth,mapHeight]})}>نمای کامل ایران</button>
     </div>
-    <svg className="province-map" viewBox={viewport.join(" ")} aria-label="نقشهٔ استان‌های ایران"
+    <svg className="province-map" viewBox={`0 0 ${mapWidth} ${mapHeight}`} aria-label="نقشهٔ استان‌های ایران"
       onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd}
       onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
       <defs>{provinces.map(({id,path}) => <clipPath key={id} id={'province-'+id}><path d={path} clipRule="evenodd"/></clipPath>)}</defs>
+      <g className={view?.key !== viewKey ? "atlas-camera atlas-camera-transition" : "atlas-camera"}
+        style={{transform:`translate(${-viewport[0]*scale}px,${-viewport[1]*scale}px) scale(${scale})`}}>
       {provinces.map(({id,name,path,box:[x,y,width,height]}) => {
         const cover = covers.get(id);
         return <g key={id} opacity={zoom && id !== active ? 0.38 : 1}>
@@ -80,6 +88,7 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
           }}/>
         </g>;
       })}
+      </g>
     </svg>
     </div>
     {!zoom && <details className="atlas-search"><summary>انتخاب استان از فهرست</summary><label className="field">نام استان<select value={active} onChange={event => onSelect(event.target.value)}>
@@ -89,6 +98,7 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
     {zoom && region && <section className="province-gallery" aria-label={'عکس‌های '+region.name}>
       <div className="gallery-heading"><h2>خاطره‌های {region.name}</h2><span>{gallery.length.toLocaleString('fa-IR')} عکس</span></div>
       {children}
+      {feedback && <p role="status">{feedback}</p>}
       {gallery.length ? <><p>برای تغییر کاور نقشه، روی یکی از عکس‌ها بزن.</p><div className="photos">{gallery.map(photo => {
         const isCover = covers.get(active) === photo;
         return <button className="photo" key={photo.url} aria-pressed={isCover} disabled={importing} onClick={() => onCover(photo)}>

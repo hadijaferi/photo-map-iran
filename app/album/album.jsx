@@ -18,6 +18,7 @@ export default function Album() {
   const [focused, setFocused] = useState('');
   const [uploadCity, setUploadCity] = useState('');
   const stepHeading = useRef(null);
+  const statsDialog = useRef(null);
   const [ready, setReady] = useState(false);
   const [importing, setImporting] = useState(false);
   const [status, setStatus] = useState('');
@@ -172,31 +173,31 @@ export default function Album() {
   }
 
   return <>
-    <header><strong className="brand">◈ ردِ سفر</strong><a href={base + "/"}>معرفی برنامه</a></header>
+    {step < 2 && <header><strong className="brand">◈ ردِ سفر</strong><a href={base + "/"}>معرفی برنامه</a></header>}
     <main>
-      <div className="wizard album-shell">
-        {step > 0 && <div className="wizard-nav">
-          <button type="button" className="btn alt" disabled={importing} onClick={() => {
-            setStatus('');
-            if (step === 3) setFocused('');
-            setStep(step - 1);
-          }}>{step === 3 ? '← نقشهٔ ایران' : 'بازگشت'}</button>
-          <small>قدم {number(step)} از ۳</small>
-        </div>}
-        <section className={step < 2 ? "album-intro" : "album-heading"}>
-          {step < 2 && <svg className="intro-map" viewBox={`0 0 ${mapWidth} ${mapHeight}`} aria-hidden="true">
+      <div className={step < 2 ? "wizard album-shell" : "atlas-app"}>
+        {step < 2 && <section className="album-intro">
+          <svg className="intro-map" viewBox={`0 0 ${mapWidth} ${mapHeight}`} aria-hidden="true">
             {provinces.map(({id,path}) => <path key={id} d={path} fill={id === 'fars' || id === 'gilan' ? '#eab883' : '#254e46'} fillRule="evenodd" stroke="#8cab9d" strokeWidth="0.65"/>)}
-          </svg>}
+          </svg>
           <div className="album-heading-copy">
-            <p className="eyebrow">{step === 3 ? 'خاطره‌های این استان' : 'آلبوم سفر روی نقشه'}</p>
-            <h1 ref={stepHeading} tabIndex={-1}>{['ایران، به روایت عکس‌های تو', 'نقشهٔ ایران', 'نقشهٔ سفرهای من', region?.name][step]}</h1>
-            {step === 0 && <><p>از هر سفر، یک عکس روی نقشه بگذار. کم‌کم ایران با خاطره‌های تو پر می‌شه.</p><button className="btn" disabled={!ready} onClick={() => setStep(1)}>شروع کنیم <span aria-hidden="true">←</span></button></>}
-            {step === 1 && <><p>۳۱ استان، از شمال تا جنوب. از هر جا که خاطره داری شروع کن.</p><button className="btn" onClick={() => setStep(2)}>باز کردن نقشه <span aria-hidden="true">←</span></button></>}
-            {step === 2 && <p>روی یک استان بزن تا عکس‌هاش رو ببینی یا خاطره‌ای اضافه کنی.</p>}
+            <p className="eyebrow">آلبوم سفر روی نقشه</p>
+            <h1>ایران، به روایت عکس‌های تو</h1>
+            <p>از هر سفر، یک عکس روی نقشه بگذار. کم‌کم ایران با خاطره‌های تو پر می‌شه.</p>
+            <button className="btn" disabled={!ready} onClick={() => setStep(2)}>باز کردن نقشه <span aria-hidden="true">←</span></button>
           </div>
-        </section>
+        </section>}
+        {step >= 2 && <div className="atlas-top">
+          {step === 3 && <button className="atlas-back" type="button" aria-label="بازگشت به نقشهٔ ایران" disabled={importing} onClick={() => {
+            setStatus('');
+            setFocused('');
+            setStep(2);
+          }}>→</button>}
+          <h1 ref={stepHeading} tabIndex={-1}>{region?.name ?? 'نقشهٔ سفرهای من'}</h1>
+          {step === 2 && <button type="button" className="atlas-back atlas-stats-toggle" onClick={() => statsDialog.current?.showModal()}>آمار سفر</button>}
+        </div>}
         {step >= 2 && <section className="album-map-panel">
-          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} onCover={chosen => {
+          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} feedback={status || storage} onCover={chosen => {
             replacePhotos(photos.map(photo => photoProvince(photo) === activeProvince ? {...photo, cover:photo === chosen} : photo));
             setStatus('کاور استان تغییر کرد.');
           }}>
@@ -211,14 +212,27 @@ export default function Album() {
             </label>
           </div>}
           </ProvinceMap>
-          <div className="album-feedback">
-            {status && <p role="status">{status}</p>}
-            {storage && <p role="status">{storage}</p>}
-          </div>
-          {step === 2 && <div className="actions"><button className="btn" disabled={!covers.size || importing} onClick={preview}>ساخت پیش‌نمایش استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>}
-          {step === 2 && story && <img className="story" src={story} alt="پیش‌نمایش استوری سفر"/>}
         </section>}
-        {step === 2 && <details className="card wizard-management">
+        {step === 2 && <dialog ref={statsDialog} className="atlas-stats" aria-labelledby="atlas-stats-title">
+          <form method="dialog"><button className="btn alt" aria-label="بستن آمار">×</button></form>
+          <h2 id="atlas-stats-title">آمار سفر</h2>
+          <dl><div><dt>استان‌های دارای عکس</dt><dd>{number(covers.size)} از {number(provinces.length)}</dd></div>
+          <div><dt>عکس‌های روی نقشه</dt><dd>{number(photos.filter(photo => photoProvince(photo)).length)}</dd></div></dl>
+        </dialog>}
+        {step === 2 && <aside className="atlas-dock" aria-label="کارهای آلبوم">
+          <div className="atlas-dock-title"><strong>خاطره‌های ایران</strong><small>{number(covers.size)} استان از ۳۱ استان</small></div>
+          <div className="atlas-stop-list">
+            {covers.size ? [...covers].map(([id, photo]) => {
+              const province = provinces.find(item => item.id === id);
+              return <button key={id} className="atlas-stop" onClick={() => openProvince(id)}>
+                <img src={photo.url} alt=""/><span>{province.name}</span>
+              </button>;
+            }) : <p>روی استان بزن و اولین خاطره‌ات رو اضافه کن.</p>}
+          </div>
+          {status && <p role="status">{status}</p>}
+          <div className="actions atlas-share"><button className="btn" disabled={!covers.size || importing} onClick={preview}>ساخت استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>
+          {story && <img className="story" src={story} alt="پیش‌نمایش استوری سفر"/>}
+          <details className="atlas-management">
           <summary>مدیریت عکس‌ها و شهرها</summary>
           <label className="field">نام سفر<input type="text" maxLength={45} value={title} disabled={!ready || importing} onChange={event => {
             setTitle(event.target.value);
@@ -243,9 +257,10 @@ export default function Album() {
             <small>{number(selected.length)} انتخاب‌شده</small>
           </div>
           <div className="assignment"><label className="field">شهر عکس‌های انتخاب‌شده<select value={city} onChange={event => setCity(event.target.value)}>{Object.entries(cities).map(([id,[name]]) => <option key={id} value={id}>{name}</option>)}</select></label><button className="btn" disabled={!selected.length || importing} onClick={assignCity}>ثبت شهر</button></div>
-        </details>}
+          </details>
+        </aside>}
       </div>
-      <p className="footer">عکس‌ها در همین مرورگر ذخیره می‌شن.</p>
+      {step < 2 && <p className="footer">عکس‌ها در همین مرورگر ذخیره می‌شن.</p>}
     </main>
   </>;
 }

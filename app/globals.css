@@ -66,3 +66,39 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
   .album-intro .album-heading-copy { grid-row:2; padding-block-start:0; }
   .album-intro .btn { width:100%; }
 }
+
+.atlas-app { position:fixed; inset:0; isolation:isolate; background:#102722; color:#fbf4e3; }
+.atlas-app .album-map-panel { position:absolute; inset:0; border:0; border-radius:0; background:transparent; }
+.atlas-app .atlas-stage { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 38%, #234b3f, #102722 72%); }
+.atlas-app .province-map { position:absolute; inset:clamp(70px,11vh,112px) clamp(12px,8vw,110px) clamp(160px,31vh,300px); width:calc(100% - 2 * clamp(12px,8vw,110px)); height:calc(100% - clamp(70px,11vh,112px) - clamp(160px,31vh,300px)); padding:0; box-sizing:border-box; overflow:visible; }
+.atlas-camera { transform-origin:0 0; }
+.atlas-camera-transition { transition:transform 380ms cubic-bezier(.22,.8,.26,1); }
+.atlas-top { position:absolute; z-index:2; inset:0 0 auto; padding:calc(12px + env(safe-area-inset-top)) 18px 28px; display:flex; align-items:center; gap:12px; pointer-events:none; background:linear-gradient(#102722,transparent); }
+.atlas-top h1 { margin:0; font-size:clamp(23px,5vw,34px); outline:none; }
+.atlas-back,.atlas-app .map-controls button { pointer-events:auto; border:1px solid #91ac9d66; border-radius:999px; background:#102722ed; color:#fbf4e3; min-width:44px; min-height:44px; }
+.atlas-app .map-controls { inset:auto 12px clamp(168px,32vh,310px) auto; display:grid; justify-items:end; }
+.atlas-app .map-controls button:last-child { font-size:.75rem; }
+.atlas-app .atlas-progress { display:none; }
+.atlas-dock,.atlas-app .province-gallery { position:absolute; z-index:2; inset:auto 12px calc(12px + env(safe-area-inset-bottom)); max-height:min(38dvh, 390px); overflow:auto; width:min(640px,calc(100% - 24px)); margin-inline:auto; border-radius:22px; padding:14px 16px; overscroll-behavior:contain; box-shadow:0 8px 36px #0005; }
+.atlas-dock { background:#172e28f5; color:#fbf4e3; border:1px solid #91ac9d66; }
+.atlas-app .province-gallery { background:#fffdf4; color:var(--ink); border:0; animation:atlas-enter 240ms ease-out; }
+@keyframes atlas-enter { from { transform:translateY(20px); opacity:0; } }
+.atlas-dock-title { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.atlas-dock p,.atlas-dock small { color:#c8d9cc; }
+.atlas-stop-list,.atlas-app .province-gallery .photos { display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x proximity; padding:4px; }
+.atlas-stop,.atlas-app .province-gallery .photo { flex:0 0 98px; scroll-snap-align:start; }
+.atlas-stop { display:grid; gap:3px; padding:3px; border:0; border-radius:10px; background:#25483e; color:inherit; }
+.atlas-stop img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:7px; }
+.atlas-management summary { cursor:pointer; padding-block:5px; }
+.atlas-management label { color:#fbf4e3; }
+.atlas-dock .alt { color:#fbf4e3; border-color:#91ac9d; }
+.atlas-app .atlas-search,.atlas-app .atlas-attribution { position:absolute; inset-inline-start:12px; bottom:clamp(168px,32vh,310px); z-index:1; margin:0; padding:4px 8px; border-radius:8px; background:#102722ed; color:#f7edda; max-width:42%; }
+.atlas-app .atlas-search summary,.atlas-app .atlas-attribution a { color:inherit; }
+.atlas-app .atlas-attribution { bottom:calc(clamp(168px,32vh,310px) + 44px); font-size:9px; }
+@media(prefers-reduced-motion:reduce) { .atlas-camera-transition,.atlas-app .province-gallery { transition:none; animation:none; } }
+.atlas-stats-toggle { margin-inline-start:auto; padding-inline:14px; }
+.atlas-stats { width:min(440px,calc(100% - 32px)); border:0; border-radius:22px; padding:20px; background:#fffdf4; color:var(--ink); }
+.atlas-stats::backdrop { background:#102722bd; }
+.atlas-stats form { float:inline-end; }
+.atlas-stats dl div { display:flex; justify-content:space-between; gap:12px; padding-block:10px; border-bottom:1px solid var(--line); }
+.atlas-stats dd { margin:0; font-weight:700; }
