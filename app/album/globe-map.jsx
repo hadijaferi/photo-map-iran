@@ -9,6 +9,8 @@ const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
 const satellite = 'sentinel-satellite';
 const iranZoom = 5;
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+const satelliteOpacity = ['interpolate', ['linear'], ['zoom'], 13.5, 1, 15.5, 0];
+const streetOpacity = ['interpolate', ['linear'], ['zoom'], 11, 0.68, 15.5, 1];
 
 async function satelliteStyle(signal) {
   const response = await fetch(styleUrl, {signal});
@@ -26,8 +28,10 @@ async function satelliteStyle(signal) {
         ...layer,
         minzoom: Math.max(layer.minzoom ?? 0, source === 'place' ? 3.5 : 9),
         paint: {...layer.paint, ...(label ? {
-          'text-color':'#fcf7e9', 'text-halo-color':'#0b1c22', 'text-halo-width':1.2,
-        } : {'line-opacity':0.55})},
+          'text-color':['interpolate',['linear'],['zoom'],13.5,'#fcf7e9',15.5,'#253b37'],
+          'text-halo-color':['interpolate',['linear'],['zoom'],13.5,'#0b1c22',15.5,'#fffdf5'],
+          'text-halo-width':1.2,
+        } : {'line-opacity':streetOpacity})},
       });
     } else {
       base.push(layer);
@@ -49,9 +53,9 @@ async function satelliteStyle(signal) {
   };
   style.layers = [
     ...base,
-    {id:'satellite-overview',type:'raster',source:'satellite-overview',paint:{'raster-fade-duration':0}},
-    {id:satellite,type:'raster',source:satellite,paint:{
-      'raster-saturation':0.17,'raster-contrast':0.02,'raster-brightness-min':0.045,'raster-fade-duration':120,
+    {id:'satellite-overview',type:'raster',source:'satellite-overview',maxzoom:16,paint:{'raster-fade-duration':0,'raster-opacity':satelliteOpacity}},
+    {id:satellite,type:'raster',source:satellite,maxzoom:16,paint:{
+      'raster-opacity':satelliteOpacity,'raster-saturation':0.17,'raster-contrast':0.02,'raster-brightness-min':0.045,'raster-fade-duration':120,
     }},
     ...detail,
   ];
