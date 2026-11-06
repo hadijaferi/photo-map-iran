@@ -5,6 +5,48 @@ const sourceId = 'album-provinces';
 const layerId = 'album-province-hit-area';
 const toLngLat = ([x,y]) => [43.5+x/21, 40-y/25];
 
+const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
+const satellite = 'sentinel-satellite';
+const iranZoom = 5;
+
+async function satelliteStyle(signal) {
+  const response = await fetch(styleUrl, {signal});
+  if (!response.ok) throw new Error('Map style unavailable');
+  const style = await response.json();
+  const base = [];
+  const detail = [];
+  for (const layer of style.layers) {
+    const source = layer['source-layer'];
+    const road = source === 'transportation' && layer.type === 'line';
+    const label = layer.type === 'symbol';
+    if (road || label) {
+      if (label && !['place','transportation_name'].includes(source)) continue;
+      detail.push({
+        ...layer,
+        minzoom: Math.max(layer.minzoom ?? 0, source === 'place' ? 3.5 : 9),
+        paint: {...layer.paint, ...(label ? {
+          'text-color':'#fcf7e9', 'text-halo-color':'#0b1c22', 'text-halo-width':1.2,
+        } : {'line-opacity':0.55})},
+      });
+    } else {
+      base.push(layer);
+    }
+  }
+  style.sources[satellite] = {
+    type:'raster',
+    tiles:['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg'],
+    tileSize:256,
+    maxzoom:14,
+    attribution:'<a href="https://cloudless.eox.at/">Sentinel-2 cloudless by EOX</a> (modified Copernicus Sentinel data 2016), <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>',
+  };
+  style.layers = [
+    ...base,
+    {id:satellite,type:'raster',source:satellite,paint:{'raster-saturation':0.18,'raster-contrast':0.14,'raster-brightness-max':0.93}},
+    ...detail,
+  ];
+  return style;
+}
+
 function boundaryData(provinces) {
   return {
     type:'FeatureCollection',
@@ -34,16 +76,17 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
     let cancelled = false;
     let loaded = false;
     let map;
+    const controller = new AbortController();
     const timer = setTimeout(() => { if (!loaded && !cancelled) fallback.current(); }, 14000);
-    import('maplibre-gl').then(({default:maplibre}) => {
+    Promise.all([import('maplibre-gl'), satelliteStyle(controller.signal)]).then(([{default:maplibre}, style]) => {
       if (cancelled) return;
       const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
       library.current = maplibre;
       map = new maplibre.Map({
         container:element.current,
-        style:'https://tiles.openfreemap.org/styles/liberty',
+        style,
         center:reducedMotion ? iran : [20,23],
-        zoom:reducedMotion ? 4 : 1.4,
+        zoom:reducedMotion ? iranZoom : 1.5,
         minZoom:0,
         maxZoom:17,
         attributionControl:{compact:true},
@@ -58,7 +101,8 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
         loaded = true;
         clearTimeout(timer);
         map.setProjection({type:'globe'});
-        map.addSource(sourceId,{type:'geojson', data:boundaryData(provinces), attribution:'<a href="https://www.geoboundaries.org/">geoBoundaries</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'});
+        map.setSky({'sky-color':'#071018','horizon-color':'#438cc0','fog-color':'#122b3c','atmosphere-blend':0.62});
+        map.addSource(sourceId,{type:'geojson', data:boundaryData(provinces), attribution:'<a href="https://www.geoboundaries.org/">geoBoundaries</a> · Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'});
         map.addLayer({id:layerId,type:'fill',source:sourceId,maxzoom:9,paint:{'fill-color':'#254e46','fill-opacity':0.06}});
         map.addLayer({id:'album-province-boundaries',type:'line',source:sourceId,maxzoom:10,paint:{'line-color':'#366456','line-opacity':0.72,'line-width':1.25}});
         map.on('click',layerId,event => {
@@ -68,11 +112,12 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
         map.on('mouseenter',layerId,() => { map.getCanvas().style.cursor = 'pointer'; });
         map.on('mouseleave',layerId,() => { map.getCanvas().style.cursor = ''; });
         setReady(true);
-        if (!reducedMotion) map.flyTo({center:iran,zoom:4,duration:1700});
+        if (!reducedMotion) map.flyTo({center:iran,zoom:iranZoom,duration:1700});
       });
     }).catch(() => { if (!cancelled) fallback.current(); });
     return () => {
       cancelled = true;
+      controller.abort();
       clearTimeout(timer);
       globe.current = null;
       map?.remove();
@@ -113,6 +158,6 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
 
   return <>
     <div ref={element} className="globe-map" role="region" aria-label="کرهٔ زمین"/>
-    {ready && <button type="button" className="btn globe-home" onClick={() => globe.current?.flyTo({center:iran,zoom:4,duration:950})}>بازگشت به ایران</button>}
+    {ready && <button type="button" className="btn globe-home" onClick={() => globe.current?.flyTo({center:iran,zoom:iranZoom,duration:950})}>بازگشت به ایران</button>}
   </>;
 }

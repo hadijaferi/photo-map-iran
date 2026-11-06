@@ -98,10 +98,6 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
     <span className="globe-fallback" role="status">نقشهٔ آنلاین در دسترس نیست · نمای آفلاین ایران</span>
     </>}
     </div>
-    {!zoom && <details className="atlas-search"><summary>انتخاب استان از فهرست</summary><label className="field">نام استان<select value={active} onChange={event => onSelect(event.target.value)}>
-      <option value="">یک استان انتخاب کن</option>
-      {provinces.map(({id,name}) => <option key={id} value={id}>{name}</option>)}
-    </select></label></details>}
     {zoom && region && panelOpen && <section className="province-gallery" aria-label={'عکس‌های '+region.name}>
       <div className="gallery-heading"><h2>خاطره‌های {region.name}</h2><span>{gallery.length.toLocaleString('fa-IR')} عکس</span><button type="button" className="atlas-collapse" aria-label="جمع کردن پنل استان" onClick={onClosePanel}>⌄</button></div>
       {children}
@@ -113,6 +109,6 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
         </button>;
       })}</div></> : <p>اولین عکسی که اضافه کنی، روی نقشه کاور این استان می‌شه.</p>}
     </section>}
-    <small className="atlas-attribution"><a href="https://earthdata.nasa.gov/data/projects/gibs">NASA Blue Marble</a> · مرزها از <a href="https://www.geoboundaries.org/">geoBoundaries</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> و Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a></small>
+    {globeUnavailable && <details className="atlas-attribution"><summary aria-label="منابع نقشه">ⓘ</summary><small><a href="https://earthdata.nasa.gov/data/projects/gibs">NASA Blue Marble</a> · مرزها از <a href="https://www.geoboundaries.org/">geoBoundaries</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> و Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a></small></details>}
   </>;
 }

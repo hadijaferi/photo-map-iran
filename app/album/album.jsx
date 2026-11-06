@@ -264,6 +264,10 @@ export default function Album() {
         </dialog>}
         {step === 2 && panelOpen && <aside className="atlas-dock" aria-label="کارهای آلبوم">
           <div className="atlas-dock-title"><strong>خاطره‌های ایران</strong><small>{number(covers.size)} استان از ۳۱ استان</small><button type="button" className="atlas-collapse" aria-label="جمع کردن پنل خاطره‌ها" onClick={() => setPanelOpen(false)}>⌄</button></div>
+          <details className="atlas-search"><summary>انتخاب استان از فهرست</summary><label className="field">نام استان<select value="" onChange={event => openProvince(event.target.value)}>
+            <option value="">یک استان انتخاب کن</option>
+            {provinces.map(({id,name}) => <option key={id} value={id}>{name}</option>)}
+          </select></label></details>
           <div className="atlas-stop-list">
             {covers.size ? [...covers].map(([id, photo]) => {
               const province = provinces.find(item => item.id === id);

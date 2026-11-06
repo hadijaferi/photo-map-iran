@@ -113,3 +113,9 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
 .globe-photo-marker img { width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
 .globe-fallback { position:absolute; inset-inline-start:12px; inset-block-start:80px; background:#102722; color:#fbf4e3; padding:4px 8px; border-radius:8px; font-size:12px; }
 .globe-map .maplibregl-ctrl-bottom-right { top:calc(122px + env(safe-area-inset-top)); bottom:auto; }
+.atlas-app { background:#071018; }
+.atlas-app .atlas-stage { background:radial-gradient(ellipse at center,#132636,#071018 72%); }
+.atlas-app .atlas-dock .atlas-search { position:static; margin:3px 0; padding:0; max-width:none; background:transparent; font-size:.88rem; }
+.atlas-app .atlas-attribution { inset-block-start:calc(122px + env(safe-area-inset-top)); bottom:auto; width:max-content; }
+.atlas-app .atlas-attribution summary { cursor:pointer; list-style:none; min-width:28px; min-height:28px; text-align:center; font-size:16px; }
+.atlas-app .atlas-attribution small { display:block; max-width:200px; color:inherit; }
