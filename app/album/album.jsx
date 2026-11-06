@@ -2,7 +2,9 @@
 
 import {useEffect, useRef, useState} from 'react';
 import {openAlbum, saveAlbum} from '../../lib/album';
-import {cities, loadImage, mapSvg, samplePhotos, suggestCity} from '../../lib/photos';
+import {cities, loadImage, samplePhotos, suggestCity} from '../../lib/photos';
+import {cityProvince, provinceCovers} from '../../lib/provinces';
+import ProvinceMap from './province-map';
 import {createStory} from '../../lib/story';
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
@@ -12,7 +14,7 @@ export default function Album() {
   const [photos, setPhotos] = useState([]);
   const [title, setTitle] = useState('سفر شمال');
   const [city, setCity] = useState('rasht');
-  const [focused, setFocused] = useState('');
+  const [focused, setFocused] = useState(null);
   const [ready, setReady] = useState(false);
   const [importing, setImporting] = useState(false);
   const [status, setStatus] = useState('');
@@ -60,8 +62,8 @@ export default function Album() {
   useEffect(() => () => { if (story) URL.revokeObjectURL(story); }, [story]);
 
   const selected = photos.filter(photo => photo.selected);
-  const occupied = [...new Set(photos.map(photo => photo.city).filter(Boolean))];
-  const activeCity = occupied.includes(focused) ? focused : occupied[0];
+  const covers = provinceCovers(photos);
+  const activeProvince = focused ?? covers.keys().next().value ?? '';
 
   function persist(nextTitle, nextPhotos) {
     if (!db.current) return;
@@ -127,8 +129,8 @@ export default function Album() {
   }
 
   function assignCity() {
-    replacePhotos(photos.map(photo => photo.selected ? {...photo, city, selected:false} : photo));
-    setFocused(city);
+    replacePhotos(photos.map(photo => photo.selected ? {...photo, city, selected:false, cover:photo.cover && cityProvince[photo.city] === cityProvince[city]} : photo));
+    setFocused(cityProvince[city]);
     setStatus('شهر ' + cities[city][0] + ' برای ' + number(selected.length) + ' عکس ثبت شد.');
   }
 
@@ -190,16 +192,11 @@ export default function Album() {
         </section>
         <section className="card">
           <h2>۲. نقشه و خروجی</h2>
-          <div className="map">
-            <div className="map-background" dangerouslySetInnerHTML={{__html:mapSvg}}/>
-            {occupied.map(id => {
-              const [name,x,y] = cities[id];
-              return <button className="pin" key={id} style={{right:(100-x/4)+'%',top:(y/3)+'%'}} aria-pressed={id === activeCity} onClick={() => setFocused(id)}>{name}</button>;
-            })}
-          </div>
-          <small>نقشه شماتیک · برای دیدن عکس‌ها روی نام شهر بزن.</small>
-          <div className="strip" aria-label="عکس‌های شهر انتخاب‌شده">{activeCity && photos.filter(photo => photo.city === activeCity).map(photo => <img key={photo.url} src={photo.url} alt={'عکس سفر در '+cities[activeCity][0]}/>)}</div>
-          <div className="actions"><button className="btn" disabled={!occupied.length} onClick={preview}>ساخت پیش‌نمایش استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>
+          <ProvinceMap photos={photos} covers={covers} active={activeProvince} importing={importing} onSelect={setFocused} onCover={chosen => {
+            replacePhotos(photos.map(photo => cityProvince[photo.city] === activeProvince ? {...photo, cover:photo === chosen} : photo));
+            setStatus('کاور استان ذخیره شد.');
+          }}/>
+          <div className="actions"><button className="btn" disabled={!covers.size} onClick={preview}>ساخت پیش‌نمایش استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>
           {story && <img className="story" src={story} alt="پیش‌نمایش استوری سفر"/>}
         </section>
       </div>
