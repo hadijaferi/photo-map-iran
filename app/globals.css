@@ -123,3 +123,7 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
 .province-photo .photo { width:100%; }
 .photo-remove { min-height:44px; border:0; background:transparent; color:#9b3028; font-size:.8rem; }
 .globe-map { background-color:#071119; background-size:480px 560px; }
+.globe-provider { position:absolute; z-index:1; inset-block-start:calc(148px + env(safe-area-inset-top)); inset-inline-start:12px; display:grid; justify-items:start; gap:4px; }
+.globe-provider .btn { background:#102722; border-radius:999px; }
+.globe-provider small { padding:4px 8px; background:#102722; color:#fff; }
+.globe-provider img { display:block; height:30px; width:auto; }

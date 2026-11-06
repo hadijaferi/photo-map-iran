@@ -26,6 +26,7 @@ jobs:
       - run: npm run build
         env:
           NEXT_PUBLIC_BASE_PATH: /photo-map-iran
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ vars.MAPBOX_PUBLIC_TOKEN }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

@@ -7,13 +7,36 @@ const toLngLat = ([x,y]) => [43.5+x/21, 40-y/25];
 
 const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
 const satellite = 'sentinel-satellite';
+const mapboxSatellite = 'mapbox-satellite';
+const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || '';
+
+async function mapboxSource(signal) {
+  if (!mapboxToken.startsWith('pk.')) return null;
+  const token = encodeURIComponent(mapboxToken);
+  try {
+    const response = await fetch('https://api.mapbox.com/v4/mapbox.satellite.json?access_token=' + token, {
+      signal:AbortSignal.any([signal, AbortSignal.timeout(4500)]),
+    });
+    if (!response.ok) return null;
+    const tileset = await response.json();
+    return {
+      type:'raster',
+      tiles:['https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=' + token],
+      tileSize:512,
+      maxzoom:Math.min(22, tileset.maxzoom ?? 19),
+      attribution:tileset.attribution || '<a href="https://www.mapbox.com/about/maps/">© Mapbox</a>',
+    };
+  } catch {
+    return null;
+  }
+}
 const iranZoom = 5;
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const satelliteOpacity = ['interpolate', ['linear'], ['zoom'], 13.5, 1, 15.5, 0];
 const streetOpacity = ['interpolate', ['linear'], ['zoom'], 11, 0.68, 15.5, 1];
 
 async function satelliteStyle(signal) {
-  const response = await fetch(styleUrl, {signal});
+  const [response, premium] = await Promise.all([fetch(styleUrl, {signal}), mapboxSource(signal)]);
   if (!response.ok) throw new Error('Map style unavailable');
   const style = await response.json();
   const base = [];
@@ -57,8 +80,10 @@ async function satelliteStyle(signal) {
     {id:satellite,type:'raster',source:satellite,maxzoom:16,paint:{
       'raster-opacity':satelliteOpacity,'raster-saturation':0.17,'raster-contrast':0.02,'raster-brightness-min':0.045,'raster-fade-duration':120,
     }},
+    ...(premium ? [{id:mapboxSatellite,type:'raster',source:mapboxSatellite,layout:{visibility:'none'},paint:{'raster-fade-duration':180}}] : []),
     ...detail,
   ];
+  if (premium) style.sources[mapboxSatellite] = premium;
   return style;
 }
 
@@ -84,6 +109,18 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
   const fallback = useRef(onUnavailable);
   const markers = useRef([]);
   const [ready, setReady] = useState(false);
+  const [canCompare, setCanCompare] = useState(false);
+  const [showMapbox, setShowMapbox] = useState(false);
+  const [mapboxError, setMapboxError] = useState(false);
+
+  function toggleSatellite() {
+    const map = globe.current;
+    if (!map?.getLayer(mapboxSatellite)) return;
+    const next = !showMapbox;
+    map.setLayoutProperty(mapboxSatellite, 'visibility', next ? 'visible' : 'none');
+    setShowMapbox(next);
+    setMapboxError(false);
+  }
   selection.current = onSelect;
   fallback.current = onUnavailable;
 
@@ -112,6 +149,11 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
       map.addControl(new maplibre.NavigationControl({showCompass:true}), 'top-left');
       map.on('error', event => {
         if (!loaded && !event.sourceId && !cancelled) fallback.current();
+        if (event.sourceId === mapboxSatellite && [401,403,429].includes(event.error?.status)) {
+          map.setLayoutProperty(mapboxSatellite, 'visibility', 'none');
+          setShowMapbox(false);
+          setMapboxError(true);
+        }
       });
       map.on('style.load', () => {
         if (cancelled) return;
@@ -129,6 +171,7 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
         map.on('mouseenter',layerId,() => { map.getCanvas().style.cursor = 'pointer'; });
         map.on('mouseleave',layerId,() => { map.getCanvas().style.cursor = ''; });
         setReady(true);
+        setCanCompare(Boolean(style.sources[mapboxSatellite]));
         if (!reducedMotion) map.flyTo({center:iran,zoom:iranZoom,duration:1700});
       });
     }).catch(() => { if (!cancelled) fallback.current(); });
@@ -176,6 +219,11 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
 
   return <>
     <div ref={element} className="globe-map" style={{backgroundImage:`url(${basePath}/globe-stars.svg)`}} role="region" aria-label="کرهٔ زمین"/>
+    {canCompare && <div className="globe-provider">
+      <button type="button" className="btn" aria-pressed={showMapbox} onClick={toggleSatellite}>{showMapbox ? 'بازگشت به نقشهٔ فعلی' : 'مقایسه با Mapbox'}</button>
+      {mapboxError && <small role="status">تصویر Mapbox در دسترس نیست.</small>}
+      {showMapbox && <a href="https://www.mapbox.com/about/maps/" aria-label="Mapbox"><img src={basePath + '/mapbox-logo.svg'} alt="Mapbox"/></a>}
+    </div>}
     {ready && <button type="button" className="btn globe-home" onClick={() => globe.current?.flyTo({center:iran,zoom:iranZoom,duration:950})}>بازگشت به ایران</button>}
   </>;
 }
