@@ -119,3 +119,6 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
 .atlas-app .atlas-attribution { inset-block-start:calc(122px + env(safe-area-inset-top)); bottom:auto; width:max-content; }
 .atlas-app .atlas-attribution summary { cursor:pointer; list-style:none; min-width:28px; min-height:28px; text-align:center; font-size:16px; }
 .atlas-app .atlas-attribution small { display:block; max-width:200px; color:inherit; }
+.province-photo { flex:0 0 106px; display:grid; align-content:start; scroll-snap-align:start; }
+.province-photo .photo { width:100%; }
+.photo-remove { min-height:44px; border:0; background:transparent; color:#9b3028; font-size:.8rem; }

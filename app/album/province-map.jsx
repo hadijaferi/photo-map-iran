@@ -4,7 +4,7 @@ import {changeView, mapView} from './map-viewport';
 import {cities} from '../../lib/photos';
 import {photoProvince, mapHeight, mapWidth, provinces} from '../../lib/provinces';
 
-export default function ProvinceMap({photos, covers, active, onSelect, onCover, importing, zoom = false, children, feedback, panelOpen, onClosePanel, terrainUrl}) {
+export default function ProvinceMap({photos, covers, active, onSelect, onCover, onRemove, importing, zoom = false, children, feedback, panelOpen, onClosePanel, terrainUrl}) {
   const [globeUnavailable, setGlobeUnavailable] = useState(false);
   const region = provinces.find(province => province.id === active);
   const gallery = photos.filter(photo => photoProvince(photo) === active);
@@ -102,11 +102,13 @@ export default function ProvinceMap({photos, covers, active, onSelect, onCover, 
       <div className="gallery-heading"><h2>خاطره‌های {region.name}</h2><span>{gallery.length.toLocaleString('fa-IR')} عکس</span><button type="button" className="atlas-collapse" aria-label="جمع کردن پنل استان" onClick={onClosePanel}>⌄</button></div>
       {children}
       {feedback && <p role="status">{feedback}</p>}
-      {gallery.length ? <><p>برای تغییر کاور نقشه، روی یکی از عکس‌ها بزن.</p><div className="photos">{gallery.map(photo => {
+      {gallery.length ? <><p>برای تغییر کاور نقشه، روی یکی از عکس‌ها بزن.</p><div className="photos">{gallery.map((photo,index) => {
         const isCover = covers.get(active) === photo;
-        return <button className="photo" key={photo.url} aria-pressed={isCover} disabled={importing} onClick={() => onCover(photo)}>
+        return <div className="province-photo" key={photo.url}><button className="photo" aria-pressed={isCover} disabled={importing} onClick={() => onCover(photo)}>
           <img src={photo.url} alt=""/><span>{cities[photo.city]?.[0] ?? region.name} · {isCover ? 'کاور فعلی' : 'انتخاب کاور'}</span>
-        </button>;
+        </button>
+        <button type="button" className="photo-remove" disabled={importing} onClick={() => onRemove(photo)} aria-label={`حذف عکس ${(index+1).toLocaleString('fa-IR')}`}>حذف</button>
+        </div>;
       })}</div></> : <p>اولین عکسی که اضافه کنی، روی نقشه کاور این استان می‌شه.</p>}
     </section>}
     {globeUnavailable && <details className="atlas-attribution"><summary aria-label="منابع نقشه">ⓘ</summary><small><a href="https://earthdata.nasa.gov/data/projects/gibs">NASA Blue Marble</a> · مرزها از <a href="https://www.geoboundaries.org/">geoBoundaries</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> و Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a></small></details>}

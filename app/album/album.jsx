@@ -169,13 +169,16 @@ export default function Album() {
     setStatus('شهر ' + cities[city][0] + ' برای ' + number(selected.length) + ' عکس ثبت شد.');
   }
 
-  function removePhotos() {
-    if (!window.confirm('عکس‌های انتخاب‌شده از این آلبوم حذف بشن؟')) return;
-    for (const photo of selected) {
+  function removePhotos(targets) {
+    if (!targets.length) return;
+    const message = targets.length === 1 ? 'این عکس از آلبوم حذف بشه؟' : 'عکس‌های انتخاب‌شده از این آلبوم حذف بشن؟';
+    if (!window.confirm(message)) return;
+    const removed = new Set(targets);
+    for (const photo of removed) {
       if (urls.current.delete(photo.url)) URL.revokeObjectURL(photo.url);
     }
-    replacePhotos(photos.filter(photo => !photo.selected));
-    setStatus('عکس‌های انتخاب‌شده از آلبوم حذف شدند.');
+    replacePhotos(photos.filter(photo => !removed.has(photo)));
+    setStatus(targets.length === 1 ? 'عکس از آلبوم حذف شد.' : 'عکس‌های انتخاب‌شده از آلبوم حذف شدند.');
   }
 
   async function preview() {
@@ -242,7 +245,7 @@ export default function Album() {
           {step === 2 && panelOpen && <button type="button" className="atlas-back atlas-stats-toggle"  onClick={() => statsDialog.current?.showModal()}>آمار سفر</button>}
         </div>}
         {step >= 2 && <section className="album-map-panel">
-          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} feedback={status || storage} panelOpen={panelOpen} onClosePanel={() => setPanelOpen(false)} terrainUrl={base + '/iran-relief.jpg'} onCover={chosen => {
+          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} feedback={status || storage} panelOpen={panelOpen} onClosePanel={() => setPanelOpen(false)} terrainUrl={base + '/iran-relief.jpg'} onRemove={photo => removePhotos([photo])} onCover={chosen => {
             replacePhotos(photos.map(photo => photoProvince(photo) === activeProvince ? {...photo, cover:photo === chosen} : photo));
             setStatus('کاور استان تغییر کرد.');
           }}>
@@ -312,7 +315,7 @@ export default function Album() {
           <div className="actions">
             <button className="btn alt" disabled={!photos.length || importing} onClick={() => selectPhotos(photos.map(photo => ({...photo, selected:true})))}>انتخاب همه</button>
             <button className="btn alt" disabled={!selected.length || importing} onClick={() => selectPhotos(photos.map(photo => ({...photo, selected:false})))}>لغو انتخاب</button>
-            <button className="btn alt" disabled={!selected.length || importing} onClick={removePhotos}>حذف انتخاب‌شده‌ها</button>
+            <button className="btn alt" disabled={!selected.length || importing} onClick={() => removePhotos(selected)}>حذف انتخاب‌شده‌ها</button>
             <small>{number(selected.length)} انتخاب‌شده</small>
           </div>
           <div className="assignment"><label className="field">شهر عکس‌های انتخاب‌شده<select value={city} onChange={event => setCity(event.target.value)}>{Object.entries(cities).map(([id,[name]]) => <option key={id} value={id}>{name}</option>)}</select></label><button className="btn" disabled={!selected.length || importing} onClick={assignCity}>ثبت شهر</button></div>
