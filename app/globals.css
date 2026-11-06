@@ -12,3 +12,16 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
 .province-map path[role=button] { cursor:pointer; }
 .province-map path[role=button]:focus-visible { outline:none; stroke:#a65325; stroke-width:3; }
 .province-gallery { margin-block:12px; }
+.wizard { max-width: 640px; margin-inline:auto; }
+.wizard-nav { display:flex; justify-content:space-between; align-items:center; padding-block-start:16px; }
+.wizard-heading h1:focus { outline:none; }
+.wizard-heading .btn { margin-block-start:10px; }
+.map-choice { display:grid; gap:6px; text-align:start; width:100%; padding:20px; border:1px solid var(--line); border-radius:18px; background:#e5efe8; color:var(--ink); }
+.map-choice strong { font-size:1.4rem; }
+.wizard-management { margin-block-start:16px; }
+.wizard-management summary { cursor:pointer; }
+.wizard-management summary + label { margin-block-start:12px; }
+.wizard-upload { display:grid; gap:12px; }
+.upload-action { position:relative; display:grid; place-items:center; cursor:pointer; }
+.upload-action input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.upload-action:focus-within { outline:3px solid #aa5b24; outline-offset:3px; }

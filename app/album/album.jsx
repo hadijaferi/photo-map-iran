@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {openAlbum, saveAlbum} from '../../lib/album';
 import {cities, loadImage, samplePhotos, suggestCity} from '../../lib/photos';
-import {cityProvince, provinceCovers} from '../../lib/provinces';
+import {cityProvince, photoProvince, provinceCovers, provinces} from '../../lib/provinces';
 import ProvinceMap from './province-map';
 import {createStory} from '../../lib/story';
 
@@ -14,7 +14,10 @@ export default function Album() {
   const [photos, setPhotos] = useState([]);
   const [title, setTitle] = useState('سفر شمال');
   const [city, setCity] = useState('rasht');
-  const [focused, setFocused] = useState(null);
+  const [step, setStep] = useState(0);
+  const [focused, setFocused] = useState('');
+  const [uploadCity, setUploadCity] = useState('');
+  const stepHeading = useRef(null);
   const [ready, setReady] = useState(false);
   const [importing, setImporting] = useState(false);
   const [status, setStatus] = useState('');
@@ -63,7 +66,18 @@ export default function Album() {
 
   const selected = photos.filter(photo => photo.selected);
   const covers = provinceCovers(photos);
-  const activeProvince = focused ?? covers.keys().next().value ?? '';
+  const activeProvince = focused;
+  const region = provinces.find(province => province.id === activeProvince);
+
+  useEffect(() => { if (step > 0) stepHeading.current?.focus(); }, [step, activeProvince]);
+
+  function openProvince(id) {
+    if (!id || importing) return;
+    setFocused(id);
+    setUploadCity('');
+    setStatus('');
+    setStep(3);
+  }
 
   function persist(nextTitle, nextPhotos) {
     if (!db.current) return;
@@ -100,7 +114,7 @@ export default function Album() {
     setPhotos(next);
   }
 
-  async function importFiles(event) {
+  async function importFiles(event, province, chosenCity) {
     const files = Array.from(event.target.files);
     event.target.value = '';
     if (!files.length || inputLock.current) return;
@@ -113,7 +127,7 @@ export default function Album() {
         try {
           await loadImage(url);
           urls.current.add(url);
-          return {blob, url, suggestion:await suggestCity(blob), city:'', selected:false};
+          return {blob, url, suggestion:await suggestCity(blob), city:chosenCity || '', province, selected:false};
         } catch {
           URL.revokeObjectURL(url);
           return null;
@@ -129,8 +143,7 @@ export default function Album() {
   }
 
   function assignCity() {
-    replacePhotos(photos.map(photo => photo.selected ? {...photo, city, selected:false, cover:photo.cover && cityProvince[photo.city] === cityProvince[city]} : photo));
-    setFocused(cityProvince[city]);
+    replacePhotos(photos.map(photo => photo.selected ? {...photo, city, province:cityProvince[city], selected:false, cover:photo.cover && photoProvince(photo) === cityProvince[city]} : photo));
     setStatus('شهر ' + cities[city][0] + ' برای ' + number(selected.length) + ' عکس ثبت شد.');
   }
 
@@ -148,7 +161,7 @@ export default function Album() {
     const started = revision.current;
     setStatus('در حال ساخت استوری…');
     try {
-      const blob = await createStory(title.trim() || 'نقشه سفر من', photos.filter(photo => photo.city));
+      const blob = await createStory(title.trim() || 'نقشه سفر من', photos.filter(photo => photoProvince(photo)));
       if (started !== revision.current) return;
       setStory(URL.createObjectURL(blob));
       setStatus('استوری آماده دانلود شد.');
@@ -160,23 +173,58 @@ export default function Album() {
   return <>
     <header><strong className="brand">◈ ردِ سفر</strong><a href={base + "/"}>معرفی برنامه</a></header>
     <main>
-      <section className="hero"><p className="eyebrow">آلبوم شخصی</p><h1>عکس‌هات رو به شهرها وصل کن.</h1><p>چند عکس انتخاب کن، شهر هر گروه رو مشخص کن و یک استوری از سفرت بساز.</p></section>
-      <div className="layout">
-        <section className="card">
-          <h2>۱. عکس‌ها و شهرها</h2>
+      <div className="wizard">
+        {step > 0 && <div className="wizard-nav">
+          <button type="button" className="btn alt" disabled={importing} onClick={() => {
+            setStatus('');
+            if (step === 3) setFocused('');
+            setStep(step - 1);
+          }}>بازگشت</button>
+          <small>قدم {number(step)} از ۳</small>
+        </div>}
+        <section className="hero wizard-heading">
+          <p className="eyebrow">آلبوم سفر روی نقشه</p>
+          <h1 ref={stepHeading} tabIndex={-1}>{['خاطره‌هات رو روی نقشه ببین', 'نقشه‌ات رو انتخاب کن', 'نقشهٔ سفرهای من', region?.name][step]}</h1>
+          {step === 0 && <><p>یه استان رو انتخاب کن و عکس سفرت رو اضافه کن. اولین عکس داخل مرز همون استان روی نقشه می‌شینه.</p><button className="btn" onClick={() => setStep(1)}>شروع کنیم</button></>}
+          {step === 1 && <><p>برای شروع، نقشهٔ ایران رو باز کن.</p><button className="map-choice" disabled={!ready} onClick={() => setStep(2)}><strong>ایران</strong><span>{number(covers.size)} استان از ۳۱ استان عکس داره</span><span>باز کردن نقشه ←</span></button></>}
+          {step === 2 && <p>روی یک استان بزن تا خاطره‌هاش رو ببینی یا عکس اضافه کنی.</p>}
+          {step === 3 && <p>عکس‌های این استان اینجا جمع می‌شن. برای عوض کردن کاور، روی عکس دلخواهت بزن.</p>}
+        </section>
+        {step >= 2 && <section className="card">
+          {step === 3 && region && <div className="wizard-upload">
+            {Object.values(cityProvince).includes(activeProvince) && <label className="field">شهر (اختیاری)<select value={uploadCity} disabled={importing} onChange={event => setUploadCity(event.target.value)}>
+              <option value="">فعلاً فقط استان</option>
+              {Object.entries(cities).filter(([id]) => cityProvince[id] === activeProvince).map(([id,[name]]) => <option key={id} value={id}>{name}</option>)}
+            </select></label>}
+            <label className="btn upload-action">
+              {covers.has(activeProvince) ? 'افزودن عکس بیشتر' : 'افزودن اولین خاطرهٔ ' + region.name}
+              <input type="file" accept="image/*" multiple disabled={!ready || importing} onChange={event => importFiles(event, activeProvince, uploadCity)}/>
+            </label>
+          </div>}
+          <p role="status">{status}</p>
+          {storage && <p role="status">{storage}</p>}
+          <ProvinceMap photos={photos} covers={covers} active={activeProvince} zoom={step === 3} importing={importing} onSelect={openProvince} onCover={chosen => {
+            replacePhotos(photos.map(photo => photoProvince(photo) === activeProvince ? {...photo, cover:photo === chosen} : photo));
+            setStatus('کاور استان تغییر کرد.');
+          }}/>
+          {step === 2 && <div className="actions"><button className="btn" disabled={!covers.size || importing} onClick={preview}>ساخت پیش‌نمایش استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>}
+          {step === 2 && story && <img className="story" src={story} alt="پیش‌نمایش استوری سفر"/>}
+        </section>}
+        {step === 2 && <details className="card wizard-management">
+          <summary>مدیریت عکس‌ها و شهرها</summary>
           <label className="field">نام سفر<input type="text" maxLength={45} value={title} disabled={!ready || importing} onChange={event => {
             setTitle(event.target.value);
             invalidateStory();
             persist(event.target.value, photos);
           }}/></label>
-          <label className="picker">انتخاب عکس از دستگاه<br/><input type="file" accept="image/*" multiple disabled={!ready || importing} onChange={importFiles}/></label>
+          <label className="picker">انتخاب عکس از دستگاه<br/><input type="file" accept="image/*" multiple disabled={!ready || importing} onChange={event => importFiles(event)}/></label>
           <button className="btn alt" disabled={!ready || importing || photos.some(photo => photo.sample)} onClick={() => {
             replacePhotos([...photos, ...samplePhotos()]);
             setStatus('۱۰ تصویر نمونه اضافه شد.');
           }}>امتحان با ۱۰ عکس نمونه</button>
           <div className="photos">
             {photos.map((photo, index) => {
-              const label = cities[photo.city]?.[0] ?? (photo.suggestion ? 'پیشنهاد: ' + cities[photo.suggestion][0] : 'بدون شهر');
+              const label = cities[photo.city]?.[0] ?? (photo.suggestion ? 'پیشنهاد: ' + cities[photo.suggestion][0] : provinces.find(province => province.id === photo.province)?.name ?? 'بدون شهر');
               return <button className="photo" key={photo.url} aria-pressed={photo.selected} aria-label={`عکس ${index+1}، ${label}`} disabled={importing} onClick={() => selectPhotos(photos.map(item => item === photo ? {...item, selected:!item.selected} : item))}><img src={photo.url} alt=""/><span>{label}</span></button>;
             })}
           </div>
@@ -187,20 +235,9 @@ export default function Album() {
             <small>{number(selected.length)} انتخاب‌شده</small>
           </div>
           <div className="assignment"><label className="field">شهر عکس‌های انتخاب‌شده<select value={city} onChange={event => setCity(event.target.value)}>{Object.entries(cities).map(([id,[name]]) => <option key={id} value={id}>{name}</option>)}</select></label><button className="btn" disabled={!selected.length || importing} onClick={assignCity}>ثبت شهر</button></div>
-          {storage && <p className="status" role="status">{storage}</p>}
-          <p className="status" role="status">{!ready ? 'در حال باز کردن آلبوم…' : status}</p>
-        </section>
-        <section className="card">
-          <h2>۲. نقشه و خروجی</h2>
-          <ProvinceMap photos={photos} covers={covers} active={activeProvince} importing={importing} onSelect={setFocused} onCover={chosen => {
-            replacePhotos(photos.map(photo => cityProvince[photo.city] === activeProvince ? {...photo, cover:photo === chosen} : photo));
-            setStatus('کاور استان ذخیره شد.');
-          }}/>
-          <div className="actions"><button className="btn" disabled={!covers.size} onClick={preview}>ساخت پیش‌نمایش استوری</button>{story && <a className="btn alt" download="travel-story.png" href={story}>دانلود PNG</a>}</div>
-          {story && <img className="story" src={story} alt="پیش‌نمایش استوری سفر"/>}
-        </section>
+        </details>}
       </div>
-      <p className="footer">عکس‌ها در همین مرورگر ذخیره می‌شن. برای نصب در آیفون، در Safari از منوی اشتراک‌گذاری «افزودن به صفحهٔ اصلی» رو بزن.</p>
+      <p className="footer">عکس‌ها در همین مرورگر ذخیره می‌شن.</p>
     </main>
   </>;
 }
