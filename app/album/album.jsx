@@ -187,8 +187,10 @@ export default function Album() {
       if (started !== revision.current) return;
       setStory(URL.createObjectURL(blob));
       setStatus('استوری آماده دانلود شد.');
-    } catch {
-      if (started === revision.current) setStatus('ساخت تصویر ممکن نشد. دوباره امتحان کن.');
+    } catch (error) {
+      if (started === revision.current) setStatus(error.message === 'No decodable photos'
+        ? 'این عکس‌ها برای خروجی باز نشدن. یک نسخهٔ JPEG یا PNG از عکس‌ها اضافه کن.'
+        : 'مرورگر نتونست فایل PNG رو بسازه. یک‌بار صفحه رو تازه کن و دوباره امتحان کن.');
     }
   }
 

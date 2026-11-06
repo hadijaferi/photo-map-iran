@@ -8,6 +8,7 @@ const toLngLat = ([x,y]) => [43.5+x/21, 40-y/25];
 const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
 const satellite = 'sentinel-satellite';
 const iranZoom = 5;
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 async function satelliteStyle(signal) {
   const response = await fetch(styleUrl, {signal});
@@ -39,9 +40,19 @@ async function satelliteStyle(signal) {
     maxzoom:14,
     attribution:'<a href="https://cloudless.eox.at/">Sentinel-2 cloudless by EOX</a> (modified Copernicus Sentinel data 2016), <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>',
   };
+  style.sources['satellite-overview'] = {
+    type:'raster',
+    tiles:[location.origin + basePath + '/world-overview.jpg'],
+    tileSize:256,
+    maxzoom:0,
+    attribution:style.sources[satellite].attribution,
+  };
   style.layers = [
     ...base,
-    {id:satellite,type:'raster',source:satellite,paint:{'raster-saturation':0.18,'raster-contrast':0.14,'raster-brightness-max':0.93}},
+    {id:'satellite-overview',type:'raster',source:'satellite-overview',paint:{'raster-fade-duration':0}},
+    {id:satellite,type:'raster',source:satellite,paint:{
+      'raster-saturation':-0.06,'raster-contrast':-0.12,'raster-brightness-min':0.09,'raster-fade-duration':120,
+    }},
     ...detail,
   ];
   return style;
@@ -89,6 +100,8 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
         zoom:reducedMotion ? iranZoom : 1.5,
         minZoom:0,
         maxZoom:17,
+        cancelPendingTileRequestsWhileZooming:false,
+        maxTileCacheSize:160,
         attributionControl:{compact:true},
       });
       globe.current = map;
@@ -101,7 +114,7 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
         loaded = true;
         clearTimeout(timer);
         map.setProjection({type:'globe'});
-        map.setSky({'sky-color':'#071018','horizon-color':'#438cc0','fog-color':'#122b3c','atmosphere-blend':0.62});
+        map.setSky({'sky-color':'#071018','horizon-color':'#438cc0','fog-color':'#263c4a','atmosphere-blend':0.3});
         map.addSource(sourceId,{type:'geojson', data:boundaryData(provinces), attribution:'<a href="https://www.geoboundaries.org/">geoBoundaries</a> · Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'});
         map.addLayer({id:layerId,type:'fill',source:sourceId,maxzoom:9,paint:{'fill-color':'#254e46','fill-opacity':0.06}});
         map.addLayer({id:'album-province-boundaries',type:'line',source:sourceId,maxzoom:10,paint:{'line-color':'#366456','line-opacity':0.72,'line-width':1.25}});
@@ -144,6 +157,7 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
       button.className = 'globe-photo-marker';
       button.setAttribute('aria-label', 'خاطره‌های ' + province.name);
       const image = document.createElement('img');
+      image.addEventListener('error', () => { image.remove(); button.textContent = '•'; });
       image.src = photo.url;
       image.alt = '';
       button.append(image);
