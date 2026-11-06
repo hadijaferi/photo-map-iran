@@ -122,3 +122,4 @@ header,main{width:min(1020px,calc(100% - 28px));margin:auto}header{display:flex;
 .province-photo { flex:0 0 106px; display:grid; align-content:start; scroll-snap-align:start; }
 .province-photo .photo { width:100%; }
 .photo-remove { min-height:44px; border:0; background:transparent; color:#9b3028; font-size:.8rem; }
+.globe-map { background-color:#071119; background-size:480px 560px; }

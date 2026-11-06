@@ -51,7 +51,7 @@ async function satelliteStyle(signal) {
     ...base,
     {id:'satellite-overview',type:'raster',source:'satellite-overview',paint:{'raster-fade-duration':0}},
     {id:satellite,type:'raster',source:satellite,paint:{
-      'raster-saturation':-0.06,'raster-contrast':-0.12,'raster-brightness-min':0.09,'raster-fade-duration':120,
+      'raster-saturation':0.17,'raster-contrast':0.02,'raster-brightness-min':0.045,'raster-fade-duration':120,
     }},
     ...detail,
   ];
@@ -114,7 +114,7 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
         loaded = true;
         clearTimeout(timer);
         map.setProjection({type:'globe'});
-        map.setSky({'sky-color':'#071018','horizon-color':'#438cc0','fog-color':'#263c4a','atmosphere-blend':0.3});
+        map.setSky({'sky-color':'rgba(0,0,0,0)','horizon-color':'rgba(0,0,0,0)','fog-color':'rgba(0,0,0,0)','atmosphere-blend':0.76});
         map.addSource(sourceId,{type:'geojson', data:boundaryData(provinces), attribution:'<a href="https://www.geoboundaries.org/">geoBoundaries</a> · Wambacher · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'});
         map.addLayer({id:layerId,type:'fill',source:sourceId,maxzoom:9,paint:{'fill-color':'#254e46','fill-opacity':0.06}});
         map.addLayer({id:'album-province-boundaries',type:'line',source:sourceId,maxzoom:10,paint:{'line-color':'#366456','line-opacity':0.72,'line-width':1.25}});
@@ -171,7 +171,7 @@ export default function GlobeMap({provinces, active, covers, onSelect, onUnavail
   }, [covers, provinces, ready]);
 
   return <>
-    <div ref={element} className="globe-map" role="region" aria-label="کرهٔ زمین"/>
+    <div ref={element} className="globe-map" style={{backgroundImage:`url(${basePath}/globe-stars.svg)`}} role="region" aria-label="کرهٔ زمین"/>
     {ready && <button type="button" className="btn globe-home" onClick={() => globe.current?.flyTo({center:iran,zoom:iranZoom,duration:950})}>بازگشت به ایران</button>}
   </>;
 }
